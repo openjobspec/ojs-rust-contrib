@@ -1,0 +1,13 @@
+[package]
+name = "ojs-diesel-example"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+ojs = { version = "0.1", features = ["reqwest-transport"] }
+ojs-diesel = { path = ".." }
+diesel = { version = "2", features = ["postgres"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tracing-subscriber = "0.3"
