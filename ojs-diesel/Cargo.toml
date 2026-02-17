@@ -1,0 +1,26 @@
+[package]
+name = "ojs-diesel"
+version = "0.1.0"
+description = "Transactional job enqueue via Diesel connection callbacks for OJS"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["jobs", "queue", "diesel", "ojs", "outbox"]
+categories = ["database"]
+readme = "README.md"
+
+autoexamples = false
+
+[dependencies]
+ojs = { workspace = true }
+diesel = { version = "2", features = ["postgres", "chrono", "serde_json", "uuid"] }
+tokio = { version = "1", features = ["rt", "sync", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v7"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
