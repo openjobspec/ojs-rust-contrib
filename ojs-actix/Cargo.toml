@@ -1,6 +1,6 @@
 [package]
 name = "ojs-actix"
-version = "0.1.0"
+version = "0.9.0"
 description = "Actix-web middleware and app data integration for OJS"
 edition.workspace = true
 rust-version.workspace = true
