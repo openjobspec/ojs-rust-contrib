@@ -203,3 +203,4 @@ async fn test_graceful_shutdown_signal_is_pending() {
     let result = tokio::time::timeout(std::time::Duration::from_millis(50), signal).await;
     assert!(result.is_err(), "shutdown_signal should not resolve without a signal");
 }
+
