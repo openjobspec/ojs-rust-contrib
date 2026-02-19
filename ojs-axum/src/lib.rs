@@ -24,10 +24,12 @@
 mod extract;
 mod layer;
 mod shutdown;
+pub mod worker;
 
 pub use extract::{OjsClient, OjsState};
 pub use layer::OjsLayer;
 pub use shutdown::shutdown_signal;
+pub use worker::{OjsWorkerManager, WorkerConfig, JobContext};
 
 /// Re-export core OJS types for convenience.
 pub use ojs::Client;
