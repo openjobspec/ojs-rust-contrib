@@ -51,3 +51,4 @@ pub struct NewOutboxEntry {
     pub status: String,
     pub created_at: DateTime<Utc>,
 }
+
