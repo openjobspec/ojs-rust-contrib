@@ -13,7 +13,7 @@ name = "worker"
 path = "src/worker.rs"
 
 [dependencies]
-ojs = { version = "0.1", features = ["reqwest-transport"] }
+ojs = { version = "0.2", features = ["reqwest-transport"] }
 ojs-axum = { path = ".." }
 axum = "0.8"
 serde = { version = "1", features = ["derive"] }

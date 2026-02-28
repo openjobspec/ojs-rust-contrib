@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-ojs = { version = "0.1", features = ["reqwest-transport"] }
+ojs = { version = "0.2", features = ["reqwest-transport"] }
 ojs-diesel = { path = ".." }
 diesel = { version = "2", features = ["postgres"] }
 serde_json = "1"
