@@ -36,3 +36,4 @@ help:
 	@echo "  build    - Build all crates"
 	@echo "  ci       - Run all CI checks (fmt + lint + test)"
 	@echo "  clean    - Clean build artifacts"
+
