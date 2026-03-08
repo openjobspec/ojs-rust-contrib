@@ -35,3 +35,4 @@ A complete Axum application demonstrating OJS integration.
    ```bash
    docker compose down
    ```
+
