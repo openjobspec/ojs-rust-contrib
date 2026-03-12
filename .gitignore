@@ -3,3 +3,8 @@ Cargo.lock
 *.swp
 *.swo
 .DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local

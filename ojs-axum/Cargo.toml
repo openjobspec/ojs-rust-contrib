@@ -1,6 +1,6 @@
 [package]
 name = "ojs-axum"
-version = "0.9.0"
+version = "0.2.0"
 description = "Axum state extractor and Tower layer for OJS"
 edition.workspace = true
 rust-version.workspace = true

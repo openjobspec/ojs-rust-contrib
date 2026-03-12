@@ -1,6 +1,6 @@
 [package]
 name = "ojs-diesel"
-version = "0.9.0"
+version = "0.2.0"
 description = "Transactional job enqueue via Diesel connection callbacks for OJS"
 edition.workspace = true
 rust-version.workspace = true
