@@ -5,7 +5,7 @@
 //! Provides [`OjsMiddleware`] to inject an [`ojs::Client`] into Actix-web's
 //! application data, and [`OjsClient`] as an extractor for handler functions.
 //!
-//! ## Example
+//! ## Quick Start — Middleware
 //!
 //! ```rust,no_run
 //! use actix_web::{web, App, HttpServer, HttpResponse};
@@ -21,12 +21,44 @@
 //!     }
 //! }
 //! ```
+//!
+//! ## Quick Start — App Data
+//!
+//! ```rust,no_run
+//! use actix_web::{web, App, HttpServer, HttpResponse};
+//! use ojs::Client;
+//! use ojs_actix::{OjsAppData, configure_ojs};
+//!
+//! async fn handler(ojs: web::Data<OjsAppData>) -> HttpResponse {
+//!     HttpResponse::Ok().finish()
+//! }
+//!
+//! # #[actix_web::main]
+//! # async fn main() -> std::io::Result<()> {
+//! let client = Client::builder().url("http://localhost:8080").build().unwrap();
+//!
+//! HttpServer::new(move || {
+//!     App::new()
+//!         .configure(configure_ojs(client.clone()))
+//!         .route("/", web::get().to(handler))
+//! })
+//! .bind("0.0.0.0:3000")?
+//! .run()
+//! .await
+//! # }
+//! ```
 
+mod app_data;
 mod extractor;
+mod health;
 mod middleware;
+mod worker;
 
+pub use app_data::{configure_ojs, OjsAppData};
 pub use extractor::OjsClient;
+pub use health::health_handler;
 pub use middleware::OjsMiddleware;
+pub use worker::{BoxedHandler, JobContext, OjsWorkerManager, WorkerConfig, WorkerError};
 
 /// Re-export core OJS types for convenience.
 pub use ojs::Client;
