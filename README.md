@@ -1,4 +1,5 @@
 # Open Job Spec — Rust Contrib
+[![Stability: beta](https://img.shields.io/badge/stability-beta-yellow.svg)](https://github.com/openjobspec/openjobspec/blob/main/STABILITY.md)
 
 [![CI](https://github.com/openjobspec/ojs-rust-contrib/actions/workflows/ci.yml/badge.svg)](https://github.com/openjobspec/ojs-rust-contrib/actions/workflows/ci.yml)
 [![docs.rs](https://img.shields.io/docsrs/ojs)](https://docs.rs/ojs)
