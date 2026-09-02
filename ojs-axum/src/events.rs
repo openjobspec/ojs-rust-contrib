@@ -27,8 +27,8 @@ use axum::{
         sse::{Event as SseEvent, KeepAlive, Sse},
         IntoResponse,
     },
-    Router,
     routing::get,
+    Router,
 };
 use futures_core::Stream;
 use serde::{Deserialize, Serialize};
@@ -147,8 +147,7 @@ impl OjsEventSubscriber {
     pub fn subscribe(&self) -> OjsEventStream {
         let config = self.config.clone();
 
-        let interval =
-            tokio::time::interval(Duration::from_millis(config.poll_interval_ms));
+        let interval = tokio::time::interval(Duration::from_millis(config.poll_interval_ms));
         let interval_stream = IntervalStream::new(interval);
 
         Box::pin(EventPollStream {
@@ -168,24 +167,30 @@ impl Stream for EventPollStream {
     type Item = OjsEvent;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        // Drive the interval timer; when it ticks we would normally query the
-        // backend for new events.  The actual HTTP polling is intentionally
-        // left as a no-op tick so that downstream consumers can integrate with
-        // real OJS event-bridge endpoints.
-        match Pin::new(&mut self.inner).poll_next(cx) {
-            Poll::Ready(Some(_instant)) => {
-                tracing::trace!(
-                    url = %self.config.url,
-                    types = ?self.config.event_types,
-                    "event poll tick"
-                );
-                // In a production integration the tick would issue an HTTP
-                // request to the OJS event-bridge.  Return Pending so the
-                // stream stays open without busy-spinning.
-                Poll::Pending
+        // Drive the interval timer. Each tick would normally query the backend
+        // for new events; the actual HTTP polling is intentionally left as a
+        // no-op so downstream consumers can integrate with real OJS
+        // event-bridge endpoints.
+        //
+        // Loop so that after a tick is consumed we poll the interval again and
+        // re-arm it. Returning `Pending` immediately after a `Ready` tick would
+        // drop the interval's waker registration, stalling the stream after the
+        // first tick (a lost-wakeup). `IntervalStream` yields `Pending` between
+        // ticks, so this loop parks the task rather than busy-spinning.
+        loop {
+            match Pin::new(&mut self.inner).poll_next(cx) {
+                Poll::Ready(Some(_instant)) => {
+                    tracing::trace!(
+                        url = %self.config.url,
+                        types = ?self.config.event_types,
+                        "event poll tick"
+                    );
+                    // No event to emit yet: continue to re-arm the interval.
+                    continue;
+                }
+                Poll::Ready(None) => return Poll::Ready(None),
+                Poll::Pending => return Poll::Pending,
             }
-            Poll::Ready(None) => Poll::Ready(None),
-            Poll::Pending => Poll::Pending,
         }
     }
 }
@@ -203,9 +208,7 @@ impl Stream for SseEventStream {
         match Pin::new(&mut self.inner).poll_next(cx) {
             Poll::Ready(Some(evt)) => {
                 let data = serde_json::to_string(&evt).unwrap_or_default();
-                let sse = SseEvent::default()
-                    .event(evt.event_type)
-                    .data(data);
+                let sse = SseEvent::default().event(evt.event_type).data(data);
                 Poll::Ready(Some(Ok(sse)))
             }
             Poll::Ready(None) => Poll::Ready(None),
@@ -236,7 +239,9 @@ pub async fn event_handler(_ojs: OjsClient) -> impl IntoResponse {
     };
     let subscriber = OjsEventSubscriber::new(config);
     let event_stream = subscriber.subscribe();
-    let sse_stream = SseEventStream { inner: event_stream };
+    let sse_stream = SseEventStream {
+        inner: event_stream,
+    };
 
     tracing::debug!("SSE event stream opened");
 
@@ -257,4 +262,73 @@ pub async fn event_handler(_ojs: OjsClient) -> impl IntoResponse {
 /// ```
 pub fn event_router() -> Router<OjsState> {
     Router::new().route("/events", get(event_handler))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use std::task::{Wake, Waker};
+
+    struct WakeProbe {
+        count: AtomicUsize,
+        notified: tokio::sync::Notify,
+    }
+
+    impl Wake for WakeProbe {
+        fn wake(self: Arc<Self>) {
+            self.wake_by_ref();
+        }
+
+        fn wake_by_ref(self: &Arc<Self>) {
+            self.count.fetch_add(1, Ordering::SeqCst);
+            self.notified.notify_one();
+        }
+    }
+
+    #[tokio::test]
+    async fn poll_stream_rearms_its_waker_after_each_tick() {
+        let subscriber = OjsEventSubscriber::new(EventConfig {
+            url: "http://localhost:9999".into(),
+            event_types: vec![OjsEventType::JobCompleted],
+            poll_interval_ms: 5,
+        });
+        let mut stream = subscriber.subscribe();
+        let probe = Arc::new(WakeProbe {
+            count: AtomicUsize::new(0),
+            notified: tokio::sync::Notify::new(),
+        });
+        let waker = Waker::from(probe.clone());
+        let mut context = Context::from_waker(&waker);
+
+        for expected_wakes in 1..=3 {
+            assert!(matches!(
+                stream.as_mut().poll_next(&mut context),
+                Poll::Pending
+            ));
+
+            tokio::time::timeout(Duration::from_millis(50), async {
+                while probe.count.load(Ordering::SeqCst) < expected_wakes {
+                    probe.notified.notified().await;
+                }
+            })
+            .await
+            .expect("interval should wake the stream after every poll");
+        }
+    }
+
+    #[test]
+    fn event_type_round_trips_through_event_string() {
+        for ty in [
+            OjsEventType::JobCompleted,
+            OjsEventType::JobFailed,
+            OjsEventType::JobRetrying,
+            OjsEventType::JobCancelled,
+            OjsEventType::WorkflowCompleted,
+        ] {
+            // Display delegates to the canonical OJS event string.
+            assert_eq!(ty.to_string(), ty.as_event_str());
+        }
+    }
 }
