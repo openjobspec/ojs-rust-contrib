@@ -4,6 +4,8 @@ version = "0.0.0"
 edition = "2021"
 publish = false
 
+[workspace]
+
 [[bin]]
 name = "main"
 path = "src/main.rs"
@@ -13,9 +15,18 @@ name = "worker"
 path = "src/worker.rs"
 
 [dependencies]
-ojs = { version = "0.2", features = ["reqwest-transport"] }
-ojs-actix = { path = ".." }
-actix-web = "4"
+ojs = { version = "0.5.0", features = ["reqwest-transport"] }
+ojs-actix = { version = "0.5.0", path = ".." }
+actix-web = { version = ">=4.15, <5", default-features = false, features = [
+    "macros",
+    "compress-brotli",
+    "compress-gzip",
+    "compress-zstd",
+    "cookies",
+    "unicode",
+    "compat",
+    "ws",
+] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
