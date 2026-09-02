@@ -2,12 +2,18 @@
 
 Actix-web middleware and app data integration for the [OJS Rust SDK](https://github.com/openjobspec/ojs-rust-sdk).
 
-## Installation
+## Security-blocked release
 
-```toml
-[dependencies]
-ojs-actix = "0.1"
-```
+`ojs-actix` 0.5.0 is intentionally not published to crates.io. A normal Actix
+application commonly enables Actix-web's default HTTP/2 feature, which selects
+unpatched `h2` 0.3 and triggers RUSTSEC-2026-0258. Disabling HTTP/2 only in this
+integration does not protect consumers whose application dependency enables
+Actix defaults through Cargo feature unification.
+
+No released Actix dependency path using patched `h2` 0.4 is currently
+available. Source and tests remain maintained, but publication is blocked
+until [actix/actix-web#4199](https://github.com/actix/actix-web/issues/4199)
+is resolved. Version 0.5.0 requires Rust 1.88 and Actix-web 4.15 or newer.
 
 ## Quick Start
 

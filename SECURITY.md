@@ -4,8 +4,8 @@
 
 | Version | Supported          |
 |---------|--------------------|
-| 1.0.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+| 0.5.x   | :white_check_mark: |
+| < 0.5   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -14,6 +14,15 @@
 If you discover a security vulnerability in any repository under the `openjobspec` organization, please report it responsibly by emailing:
 
 **[security@openjobspec.org](mailto:security@openjobspec.org)**
+
+## Actix publication status
+
+`ojs-actix` 0.5.0 is not published. Actix-web's normal default feature set
+enables HTTP/2 through unpatched `h2` 0.3, so disabling HTTP/2 only in the
+integration is insufficient once Cargo unifies features with an application.
+Publication remains blocked until upstream
+[actix/actix-web#4199](https://github.com/actix/actix-web/issues/4199)
+provides a released patched dependency path.
 
 ### What to Include
 

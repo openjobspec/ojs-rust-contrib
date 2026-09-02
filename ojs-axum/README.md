@@ -6,7 +6,7 @@ Axum state extractor and Tower layer for the [OJS Rust SDK](https://github.com/o
 
 ```toml
 [dependencies]
-ojs-axum = "0.1"
+ojs-axum = "0.5.0"
 ```
 
 ## Quick Start
