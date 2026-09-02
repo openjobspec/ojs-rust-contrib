@@ -1,6 +1,6 @@
 [package]
 name = "ojs-diesel"
-version = "0.2.0"
+version = "0.5.0"
 description = "Transactional job enqueue via Diesel connection callbacks for OJS"
 edition.workspace = true
 rust-version.workspace = true
@@ -14,7 +14,7 @@ autoexamples = false
 
 [dependencies]
 ojs = { workspace = true }
-diesel = { version = "2", features = ["postgres", "chrono", "serde_json", "uuid"] }
+diesel = { version = ">=2.3.12, <2.4", features = ["postgres", "chrono", "serde_json", "uuid"] }
 tokio = { version = "1", features = ["rt", "sync", "time"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
