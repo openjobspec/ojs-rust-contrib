@@ -73,8 +73,11 @@ pub struct JobContext {
 
 /// Type alias for boxed async job handler functions.
 pub type BoxedHandler = Arc<
-    dyn Fn(JobContext) -> Pin<Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send>>
-        + Send
+    dyn Fn(
+            JobContext,
+        ) -> Pin<
+            Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send>,
+        > + Send
         + Sync,
 >;
 
@@ -101,7 +104,13 @@ impl OjsWorkerManager {
     {
         let handler = Arc::new(move |ctx: JobContext| {
             let fut = handler(ctx);
-            Box::pin(fut) as Pin<Box<dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send>>
+            Box::pin(fut)
+                as Pin<
+                    Box<
+                        dyn Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>>
+                            + Send,
+                    >,
+                >
         });
         self.handlers.insert(job_type.to_string(), handler);
     }

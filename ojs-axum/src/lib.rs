@@ -35,13 +35,13 @@ pub mod worker;
 pub use extract::{OjsClient, OjsState};
 pub use layer::{OjsLayer, OjsTraceLayer};
 pub use shutdown::shutdown_signal;
-pub use worker::{OjsWorkerManager, WorkerConfig, JobContext};
+pub use worker::{JobContext, OjsWorkerManager, WorkerConfig};
 
 // Re-export commonly-used types from sub-modules for convenience.
 pub use cron::{CronConfig, OjsCronBridge};
 pub use error::OjsAxumError;
 pub use events::{EventConfig, OjsEventSubscriber, OjsEventType};
-pub use health::{HealthResponse, health_handler, health_router};
+pub use health::{health_handler, health_router, HealthResponse};
 
 /// Re-export core OJS types for convenience.
 pub use ojs::Client;

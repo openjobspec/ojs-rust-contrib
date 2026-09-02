@@ -137,10 +137,7 @@ async fn test_state_extraction_with_multiple_extractors() {
         .build()
         .expect("failed to build client");
 
-    async fn handler(
-        uri: axum::http::Uri,
-        ojs: OjsClient,
-    ) -> String {
+    async fn handler(uri: axum::http::Uri, ojs: OjsClient) -> String {
         let _ = ojs.inner();
         format!("path={}", uri.path())
     }
@@ -165,7 +162,9 @@ async fn test_state_extraction_with_multiple_extractors() {
 
 #[tokio::test]
 async fn test_error_response_formatting() {
-    use axum::{body::Body, http::Request, http::StatusCode, response::IntoResponse, routing::get, Router};
+    use axum::{
+        body::Body, http::Request, http::StatusCode, response::IntoResponse, routing::get, Router,
+    };
     use ojs_axum::{OjsClient, OjsState};
     use tower::ServiceExt;
 
@@ -182,10 +181,7 @@ async fn test_error_response_formatting() {
         .route("/err", get(handler))
         .with_state(OjsState::new(client));
 
-    let req = Request::builder()
-        .uri("/err")
-        .body(Body::empty())
-        .unwrap();
+    let req = Request::builder().uri("/err").body(Body::empty()).unwrap();
 
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
@@ -201,7 +197,10 @@ async fn test_graceful_shutdown_signal_is_pending() {
     // shutdown_signal should remain pending when no signal is sent
     let signal = ojs_axum::shutdown_signal();
     let result = tokio::time::timeout(std::time::Duration::from_millis(50), signal).await;
-    assert!(result.is_err(), "shutdown_signal should not resolve without a signal");
+    assert!(
+        result.is_err(),
+        "shutdown_signal should not resolve without a signal"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -211,7 +210,7 @@ async fn test_graceful_shutdown_signal_is_pending() {
 #[tokio::test]
 async fn test_health_handler_returns_json_structure() {
     use axum::{body::Body, http::Request, routing::get, Router};
-    use ojs_axum::{OjsState, health::health_handler};
+    use ojs_axum::{health::health_handler, OjsState};
     use tower::ServiceExt;
 
     let client = ojs::Client::builder()
@@ -232,7 +231,9 @@ async fn test_health_handler_returns_json_structure() {
     // Backend is unreachable so we expect 503
     assert_eq!(resp.status(), 503);
 
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
     assert_eq!(json["status"], "degraded");
@@ -243,7 +244,7 @@ async fn test_health_handler_returns_json_structure() {
 #[tokio::test]
 async fn test_health_router_mounts_at_health() {
     use axum::{body::Body, http::Request, Router};
-    use ojs_axum::{OjsState, health::health_router};
+    use ojs_axum::{health::health_router, OjsState};
     use tower::ServiceExt;
 
     let client = ojs::Client::builder()
@@ -304,7 +305,10 @@ fn test_event_type_as_event_str() {
     assert_eq!(OjsEventType::JobFailed.as_event_str(), "job.failed");
     assert_eq!(OjsEventType::JobRetrying.as_event_str(), "job.retrying");
     assert_eq!(OjsEventType::JobCancelled.as_event_str(), "job.cancelled");
-    assert_eq!(OjsEventType::WorkflowCompleted.as_event_str(), "workflow.completed");
+    assert_eq!(
+        OjsEventType::WorkflowCompleted.as_event_str(),
+        "workflow.completed"
+    );
 }
 
 #[test]
@@ -486,7 +490,9 @@ async fn test_trace_layer_passes_through() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), 200);
 
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     assert_eq!(&body[..], b"traced-ok");
 }
 
@@ -531,7 +537,7 @@ fn test_new_re_exports_accessible() {
 #[tokio::test]
 async fn test_combined_router_health_and_cron() {
     use axum::{body::Body, http::Request, Router};
-    use ojs_axum::{OjsState, health::health_router, cron::cron_router};
+    use ojs_axum::{cron::cron_router, health::health_router, OjsState};
     use tower::ServiceExt;
 
     let client = ojs::Client::builder()
@@ -553,10 +559,7 @@ async fn test_combined_router_health_and_cron() {
     assert_ne!(resp.status(), 404);
 
     // Cron list endpoint responds (will fail against backend, but not 404)
-    let req = Request::builder()
-        .uri("/cron")
-        .body(Body::empty())
-        .unwrap();
+    let req = Request::builder().uri("/cron").body(Body::empty()).unwrap();
     let resp = app.oneshot(req).await.unwrap();
     assert_ne!(resp.status(), 404);
 }
