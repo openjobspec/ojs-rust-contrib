@@ -33,8 +33,7 @@ async fn test_middleware_injects_client() {
 
 #[actix_web::test]
 async fn test_extractor_without_middleware_fails() {
-    let app =
-        test::init_service(App::new().route("/health", web::get().to(simple_handler))).await;
+    let app = test::init_service(App::new().route("/health", web::get().to(simple_handler))).await;
 
     let req = test::TestRequest::get().uri("/health").to_request();
     let resp = test::call_service(&app, req).await;
@@ -92,8 +91,7 @@ async fn test_concurrent_request_handling() {
 
 #[actix_web::test]
 async fn test_custom_error_handler_missing_middleware() {
-    let app =
-        test::init_service(App::new().route("/health", web::get().to(simple_handler))).await;
+    let app = test::init_service(App::new().route("/health", web::get().to(simple_handler))).await;
 
     let req = test::TestRequest::get().uri("/health").to_request();
     let resp = test::call_service(&app, req).await;
@@ -116,15 +114,9 @@ async fn test_app_data_extraction_in_nested_scopes() {
         .build()
         .expect("failed to build client");
 
-    let app = test::init_service(
-        App::new()
-            .wrap(OjsMiddleware::new(client))
-            .service(
-                web::scope("/api").service(
-                    web::scope("/v1").route("/jobs", web::get().to(scoped_handler)),
-                ),
-            ),
-    )
+    let app = test::init_service(App::new().wrap(OjsMiddleware::new(client)).service(
+        web::scope("/api").service(web::scope("/v1").route("/jobs", web::get().to(scoped_handler))),
+    ))
     .await;
 
     let req = test::TestRequest::get().uri("/api/v1/jobs").to_request();
@@ -204,9 +196,7 @@ async fn test_worker_manager_registered_types_sorted() {
     let manager = OjsWorkerManager::new(WorkerConfig::default());
 
     manager
-        .register("z.last", |_ctx: JobContext| {
-            Box::pin(async move { Ok(()) })
-        })
+        .register("z.last", |_ctx: JobContext| Box::pin(async move { Ok(()) }))
         .await;
 
     manager

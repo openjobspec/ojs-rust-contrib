@@ -94,9 +94,7 @@ impl Deref for OjsAppData {
 /// .await
 /// # }
 /// ```
-pub fn configure_ojs(
-    client: ojs::Client,
-) -> impl FnOnce(&mut web::ServiceConfig) + Clone {
+pub fn configure_ojs(client: ojs::Client) -> impl FnOnce(&mut web::ServiceConfig) + Clone {
     move |cfg: &mut web::ServiceConfig| {
         cfg.app_data(web::Data::new(OjsAppData::new(client)));
     }
