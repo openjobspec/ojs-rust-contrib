@@ -6,62 +6,182 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
+    name: ${{ matrix.rust == 'stable' && 'Latest dependencies' || 'MSRV' }} (${{ matrix.crate }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        rust: [stable, "1.75"]
+        rust: [stable, "1.88"]
         crate:
           - ojs-actix
           - ojs-axum
           - ojs-diesel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Check out the OJS SDK for pre-release validation
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          repository: openjobspec/ojs-rust-sdk
+          path: ojs-rust-sdk
+      - name: Configure local SDK patch
+        run: |
+          mkdir -p .cargo
+          printf '[patch.crates-io]\nojs = { path = "%s" }\n' "$GITHUB_WORKSPACE/ojs-rust-sdk" > .cargo/config.toml
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # master
         with:
           toolchain: ${{ matrix.rust }}
           components: clippy, rustfmt
 
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.crate }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.crate }}-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Check
-        run: cargo check -p ${{ matrix.crate }}
+        run: cargo check -p ${{ matrix.crate }} --all-targets --all-features
 
       - name: Test
-        run: cargo test -p ${{ matrix.crate }}
+        run: cargo test -p ${{ matrix.crate }} --all-features
 
       - name: Clippy
         if: matrix.rust == 'stable'
-        run: cargo clippy -p ${{ matrix.crate }} -- -D warnings
+        run: cargo clippy -p ${{ matrix.crate }} --all-targets --all-features -- -D warnings
 
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # stable
         with:
           components: rustfmt
 
       - name: Format check
         run: cargo fmt --all -- --check
 
+  examples:
+    name: Example (${{ matrix.example }}, Rust ${{ matrix.rust }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [stable, "1.88"]
+        example:
+          - ojs-actix/examples
+          - ojs-axum/examples
+          - ojs-diesel/examples
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          path: ojs-rust-contrib
+      - name: Check out the OJS SDK
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          repository: openjobspec/ojs-rust-sdk
+          path: ojs-rust-sdk
+      - name: Configure local SDK patch
+        run: |
+          mkdir -p .cargo
+          printf '[patch.crates-io]\nojs = { path = "%s" }\n' "$GITHUB_WORKSPACE/ojs-rust-sdk" > .cargo/config.toml
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - name: Build
+        run: cargo build --manifest-path ojs-rust-contrib/${{ matrix.example }}/Cargo.toml --all-targets
+      - name: Test
+        run: cargo test --manifest-path ojs-rust-contrib/${{ matrix.example }}/Cargo.toml --all-targets
+
   audit:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Check out the OJS SDK for pre-release validation
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          repository: openjobspec/ojs-rust-sdk
+          path: ojs-rust-sdk
+      - name: Configure local SDK patch
+        run: |
+          mkdir -p .cargo
+          printf '[patch.crates-io]\nojs = { path = "%s" }\n' "$GITHUB_WORKSPACE/ojs-rust-sdk" > .cargo/config.toml
+      - uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # stable
+      - name: Resolve auditable dependency graph
+        run: cargo generate-lockfile
+      - uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  release-readiness:
+    name: Package & Publish Dry-Run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Check out the OJS SDK for pre-release validation
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          repository: openjobspec/ojs-rust-sdk
+          path: ojs-rust-sdk
+      - name: Configure local SDK patch
+        run: |
+          mkdir -p .cargo
+          printf '[patch.crates-io]\nojs = { path = "%s" }\n' "$GITHUB_WORKSPACE/ojs-rust-sdk" > .cargo/config.toml
+      - uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # stable
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.toml') }}
+      - name: Build workspace
+        run: cargo build --workspace --all-targets --all-features
+      - name: Verify package file sets
+        run: |
+          python3 - <<'PY'
+          import tomllib
+
+          with open("ojs-actix/Cargo.toml", "rb") as manifest:
+              if tomllib.load(manifest)["package"].get("publish") is not False:
+                  raise SystemExit("ojs-actix must remain unpublished until the h2 advisory is resolved")
+          PY
+          for crate in ojs-axum ojs-diesel; do
+            cargo package --list -p "$crate" > /dev/null
+          done
+      - name: Publish dry-run against the local SDK checkout
+        run: |
+          for crate in ojs-axum ojs-diesel; do
+            cargo package -p "$crate"
+            cargo publish --dry-run --no-verify -p "$crate"
+          done
+      - name: Check from a clean consumer
+        run: |
+          rm -rf target/consumer-smoke
+          mkdir -p target/consumer-smoke/src
+          cat > target/consumer-smoke/Cargo.toml <<'EOF'
+          [package]
+          name = "ojs-contrib-consumer-smoke"
+          version = "0.0.0"
+          edition = "2021"
+          publish = false
+
+          [workspace]
+
+          [dependencies]
+          ojs-actix = { path = "../../ojs-actix" }
+          ojs-axum = { path = "../../ojs-axum" }
+          ojs-diesel = { path = "../../ojs-diesel" }
+          EOF
+          printf 'use ojs_actix as _;\nuse ojs_axum as _;\nuse ojs_diesel as _;\nfn main() {}\n' > target/consumer-smoke/src/main.rs
+          cargo check --manifest-path target/consumer-smoke/Cargo.toml

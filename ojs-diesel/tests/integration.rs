@@ -182,4 +182,3 @@ fn test_enqueue_options_with_custom_values() {
     assert_eq!(opts.queue, Some("high-priority".to_string()));
     assert_eq!(opts.priority, 100);
 }
-

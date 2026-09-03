@@ -1,0 +1,127 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # stable
+        with:
+          components: clippy, rustfmt
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.toml') }}
+      - name: Validate tag, crate versions, and changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          python3 - "$VERSION" <<'PY'
+          import pathlib
+          import sys
+          import tomllib
+
+          expected = sys.argv[1]
+          manifests = [
+              pathlib.Path("ojs-axum/Cargo.toml"),
+              pathlib.Path("ojs-diesel/Cargo.toml"),
+          ]
+          versions = {
+              manifest: tomllib.loads(manifest.read_text())["package"]["version"]
+              for manifest in manifests
+          }
+          mismatches = {
+              str(manifest): version
+              for manifest, version in versions.items()
+              if version != expected
+          }
+          if mismatches:
+              raise SystemExit(f"tag v{expected} does not match crate versions: {mismatches}")
+
+          actix = tomllib.loads(pathlib.Path("ojs-actix/Cargo.toml").read_text())
+          if actix["package"].get("publish") is not False:
+              raise SystemExit("ojs-actix must remain unpublished until its h2 advisory is resolved")
+          PY
+          grep -F "## [$VERSION]" CHANGELOG.md
+      - run: cargo generate-lockfile
+      - run: cargo fmt --all -- --check
+      - run: cargo build --locked --workspace --all-targets --all-features
+      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --workspace --all-features
+      - name: Verify publishable packages
+        run: |
+          for crate in ojs-axum ojs-diesel; do
+            cargo package --locked -p "$crate"
+            cargo publish --dry-run --locked --no-verify -p "$crate"
+          done
+
+  publish:
+    name: Publish crates
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # stable
+      - name: Package release artifacts
+        run: |
+          cargo generate-lockfile
+          for crate in ojs-axum ojs-diesel; do
+            cargo package --locked -p "$crate"
+          done
+          shasum -a 256 target/package/*.crate > target/package/checksums.txt
+      - name: Generate SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: target/package
+          artifact-name: ojs-rust-contrib-sbom.spdx.json
+          output-file: target/package/ojs-rust-contrib-sbom.spdx.json
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: target/package/*.crate
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ojs-rust-contrib-release
+          path: |
+            target/package/*.crate
+            target/package/ojs-rust-contrib-sbom.spdx.json
+            target/package/checksums.txt
+      - name: Publish crates
+        run: |
+          for crate in ojs-axum ojs-diesel; do
+            cargo publish --locked -p "$crate"
+          done
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  github-release:
+    name: GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ojs-rust-contrib-release
+          path: release-artifacts
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
+        with:
+          generate_release_notes: true
+          files: release-artifacts/*

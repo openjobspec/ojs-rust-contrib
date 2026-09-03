@@ -4,7 +4,7 @@ A complete Actix-web application demonstrating OJS integration.
 
 ## Prerequisites
 
-- Rust 1.75+
+- Rust 1.88+
 - Docker and Docker Compose
 
 ## Running

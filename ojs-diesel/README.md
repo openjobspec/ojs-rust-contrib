@@ -8,8 +8,12 @@ Implements the **transactional outbox pattern**: jobs are written to an outbox t
 
 ```toml
 [dependencies]
-ojs-diesel = "0.1"
+ojs-diesel = "0.5.0"
 ```
+
+Version 0.5.0 requires Rust 1.88 and Diesel 2.3.12 or newer. The Diesel floor
+contains the PostgreSQL protocol and `COPY` security fixes required by this
+release; the integration's public outbox API is unchanged.
 
 ## Quick Start
 
@@ -80,4 +84,3 @@ See the [`examples/`](./examples/) directory for a complete runnable project wit
 ## License
 
 Apache 2.0
-

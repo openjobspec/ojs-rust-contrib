@@ -38,8 +38,8 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{OjsClient, OjsState};
 use crate::error::OjsAxumError;
+use crate::{OjsClient, OjsState};
 
 /// Configuration for a single cron schedule.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,7 +89,9 @@ impl CronConfig {
             return Err(OjsAxumError::Validation("cron name is required".into()));
         }
         if self.schedule.is_empty() {
-            return Err(OjsAxumError::Validation("schedule expression is required".into()));
+            return Err(OjsAxumError::Validation(
+                "schedule expression is required".into(),
+            ));
         }
         if self.job_type.is_empty() {
             return Err(OjsAxumError::Validation("job_type is required".into()));
@@ -145,7 +147,11 @@ impl OjsCronBridge {
             description: None,
         };
 
-        let cron_job = self.client.register_cron_job(req).await.map_err(OjsAxumError::Ojs)?;
+        let cron_job = self
+            .client
+            .register_cron_job(req)
+            .await
+            .map_err(OjsAxumError::Ojs)?;
 
         Ok(CronEntry {
             name: cron_job.name,
@@ -159,7 +165,11 @@ impl OjsCronBridge {
 
     /// List all registered cron schedules.
     pub async fn list(&self) -> Result<Vec<CronEntry>, OjsAxumError> {
-        let jobs = self.client.list_cron_jobs().await.map_err(OjsAxumError::Ojs)?;
+        let jobs = self
+            .client
+            .list_cron_jobs()
+            .await
+            .map_err(OjsAxumError::Ojs)?;
 
         Ok(jobs
             .into_iter()
@@ -192,7 +202,7 @@ impl OjsCronBridge {
 async fn create_cron(ojs: OjsClient, Json(config): Json<CronConfig>) -> impl IntoResponse {
     let bridge = OjsCronBridge::new(ojs.into_inner());
     match bridge.register(config).await {
-        Ok(entry) => (StatusCode::CREATED, Json(serde_json::to_value(entry).unwrap())).into_response(),
+        Ok(entry) => (StatusCode::CREATED, Json(entry)).into_response(),
         Err(e) => e.into_response(),
     }
 }
@@ -201,7 +211,7 @@ async fn create_cron(ojs: OjsClient, Json(config): Json<CronConfig>) -> impl Int
 async fn list_cron(ojs: OjsClient) -> impl IntoResponse {
     let bridge = OjsCronBridge::new(ojs.into_inner());
     match bridge.list().await {
-        Ok(entries) => (StatusCode::OK, Json(serde_json::to_value(entries).unwrap())).into_response(),
+        Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),
         Err(e) => e.into_response(),
     }
 }
